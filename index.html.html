@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta de visualización: gráfico de líneas multimétrica</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a18; padding: 2rem; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 6px; }
+  .subtitle { font-size: 14px; color: #666; margin-bottom: 28px; }
+  .problem { background: #fff8e6; border-left: 3px solid #BA7517; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #4a3800; margin-bottom: 28px; line-height: 1.6; }
+  .tab-bar { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab { padding: 7px 16px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; font-size: 13px; background: transparent; color: #666; font-family: inherit; }
+  .tab.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .tab:hover:not(.active) { background: #eee; }
+  .section { display: none; }
+  .section.visible { display: block; }
+  .card { background: #fff; border: 1px solid #e0e0dc; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; }
+  .desc { font-size: 13px; color: #666; margin-bottom: 16px; line-height: 1.6; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; font-size: 12px; }
+  .pros { background: #eaf3de; border-radius: 8px; padding: 10px 12px; color: #27500A; }
+  .cons { background: #fcebeb; border-radius: 8px; padding: 10px 12px; color: #791F1F; }
+  .pros strong, .cons strong { display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: 0.05em; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; font-size: 12px; color: #666; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .small-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .sm-card { background: #fff; border: 1px solid #e0e0dc; border-radius: 10px; padding: 12px 14px; }
+  .sm-label { font-size: 12px; color: #888; margin-bottom: 2px; }
+  .sm-value { font-size: 20px; font-weight: 500; margin-bottom: 8px; }
+  .sm-change { font-size: 11px; margin-top: 4px; }
+  .rec-badge { display: inline-block; background: #eaf3de; color: #27500A; border-radius: 6px; font-size: 11px; padding: 3px 10px; margin-bottom: 10px; font-weight: 500; }
+  footer { text-align: center; font-size: 12px; color: #aaa; margin-top: 40px; }
+</style>
+</head>
+<body>
+
+<h1>Propuesta de visualización: gráfico de líneas multimétrica</h1>
+<p class="subtitle">Panel V1 — Análisis de opciones de visualización</p>
+
+<div class="problem">
+  <strong>Problema identificado:</strong> el gráfico actual usa una escala compartida para 5 métricas con magnitudes muy diferentes. Visitas puede llegar a 243 mientras que Inmobiliarias Nuevas raramente supera 7 — esto aplana visualmente las líneas de menor magnitud y las hace casi ilegibles.
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="show('dual', this)">1. Eje dual</button>
+  <button class="tab" onclick="show('index', this)">2. Índice normalizado</button>
+  <button class="tab" onclick="show('small', this)">3. Small multiples ★</button>
+  <button class="tab" onclick="show('spark', this)">4. Sparklines</button>
+</div>
+
+<div id="dual" class="section visible">
+  <div class="card">
+    <p class="desc">Eje izquierdo para Visitas (alto volumen), eje derecho para el resto. Mantiene valores absolutos en un solo gráfico.</p>
+    <div class="pros-cons">
+      <div class="pros"><strong>VENTAJAS</strong>Mantiene valores absolutos · Un solo gráfico · Fácil de implementar</div>
+      <div class="cons"><strong>DESVENTAJA</strong>Puede confundir con 2 escalas · No escala bien a 5 métricas independientes</div>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:#378ADD"></span>Visitas (izq)</span>
+      <span><span class="dot" style="background:#1D9E75"></span>Inmobiliarias (der)</span>
+      <span><span class="dot" style="background:#D4537E"></span>Inmob. nuevas (der)</span>
+      <span><span class="dot" style="background:#BA7517"></span>Referidos (der)</span>
+      <span><span class="dot" style="background:#E24B4A"></span>Incumplimientos (der)</span>
+    </div>
+    <div style="position:relative;width:100%;height:300px;"><canvas id="c1"></canvas></div>
+  </div>
+</div>
+
+<div id="index" class="section">
+  <div class="card">
+    <p class="desc">Todas las series arrancan en 100 y muestran variación porcentual respecto al primer período. Ideal para comparar tendencias sin importar la magnitud real.</p>
+    <div class="pros-cons">
+      <div class="pros"><strong>VENTAJAS</strong>Todas las líneas visibles · Compara ritmos de cambio · Una sola escala</div>
+      <div class="cons"><strong>DESVENTAJA</strong>Pierde valores absolutos · Puede resultar abstracto para usuarios no técnicos</div>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:#378ADD"></span>Visitas</span>
+      <span><span class="dot" style="background:#1D9E75"></span>Inmobiliarias</span>
+      <span><span class="dot" style="background:#D4537E"></span>Inmob. nuevas</span>
+      <span><span class="dot" style="background:#BA7517"></span>Referidos</span>
+      <span><span class="dot" style="background:#E24B4A"></span>Incumplimientos</span>
+    </div>
+    <div style="position:relative;width:100%;height:300px;"><canvas id="c2"></canvas></div>
+  </div>
+</div>
+
+<div id="small" class="section">
+  <div class="card">
+    <span class="rec-badge">★ Recomendado</span>
+    <p class="desc">Un mini-gráfico por métrica, cada uno con su propia escala. La opción más legible — ninguna línea se aplana. Cada métrica usa el 100% de su eje vertical.</p>
+    <div class="pros-cons">
+      <div class="pros"><strong>VENTAJAS</strong>Máxima legibilidad · Escala propia por métrica · Sin ambigüedad</div>
+      <div class="cons"><strong>DESVENTAJA</strong>Ocupa más espacio vertical · Más difícil comparar valores entre métricas</div>
+    </div>
+    <div class="small-grid" id="smallGrid"></div>
+  </div>
+</div>
+
+<div id="spark" class="section">
+  <div class="card">
+    <p class="desc">Tarjetas con el valor actual y una sparkline de tendencia. Compacto y fácil de escanear de un vistazo. Ideal para paneles ejecutivos.</p>
+    <div class="pros-cons">
+      <div class="pros"><strong>VENTAJAS</strong>Muy compacto · Valor actual destacado · Tendencia visible de un vistazo</div>
+      <div class="cons"><strong>DESVENTAJA</strong>Pierde detalle mensual · No muestra todos los puntos claramente</div>
+    </div>
+    <div class="small-grid" id="sparkGrid"></div>
+  </div>
+</div>
+
+<footer>Generado con Claude · Datos simulados para demostración</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const months = ['Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar'];
+const raw = {
+  visitas:        [180,200,195,220,210,230,215,243],
+  inmobiliarias:  [42,45,43,48,47,50,49,52],
+  nuevas:         [3,5,4,6,4,7,5,6],
+  referidos:      [8,10,9,11,10,12,11,13],
+  incumplimientos:[5,6,4,7,5,6,4,5]
+};
+const colors = ['#378ADD','#1D9E75','#D4537E','#BA7517','#E24B4A'];
+const labels = ['Visitas','Inmobiliarias','Inmob. nuevas','Referidos','Incumplimientos'];
+const keys = Object.keys(raw);
+
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('visible');
+  btn.classList.add('active');
+  if (id === 'small' && !window._smallBuilt) buildSmall();
+  if (id === 'spark' && !window._sparkBuilt) buildSpark();
+}
+
+function mkDataset(key, i, yAxis) {
+  return { label: labels[i], data: raw[key], borderColor: colors[i], backgroundColor: colors[i]+'22', tension: 0.35, pointRadius: 3, borderWidth: 2, ...(yAxis ? {yAxisID: yAxis} : {}) };
+}
+
+new Chart(document.getElementById('c1'), {
+  type: 'line',
+  data: { labels: months, datasets: [
+    mkDataset('visitas',0,'y'),
+    ...['inmobiliarias','nuevas','referidos','incumplimientos'].map((k,i) => mkDataset(k,i+1,'y2'))
+  ]},
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: {
+      y:  { position:'left',  title:{ display:true, text:'Visitas', font:{size:11} }, ticks:{font:{size:11}} },
+      y2: { position:'right', title:{ display:true, text:'Otras métricas', font:{size:11} }, grid:{drawOnChartArea:false}, ticks:{font:{size:11}} }
+    }
+  }
+});
+
+const indexed = keys.map((k,i) => ({ label:labels[i], data:raw[k].map(v => Math.round(v/raw[k][0]*100)), borderColor:colors[i], backgroundColor:colors[i]+'22', tension:0.35, pointRadius:3, borderWidth:2 }));
+new Chart(document.getElementById('c2'), {
+  type: 'line', data: { labels: months, datasets: indexed },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
+    scales: { y: { title:{display:true, text:'Índice (base 100)', font:{size:11}}, ticks:{font:{size:11}} } }
+  }
+});
+
+function buildSmall() {
+  window._smallBuilt = true;
+  const grid = document.getElementById('smallGrid');
+  keys.forEach((k,i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'sm-card';
+    wrap.innerHTML = `<div class="sm-label">${labels[i]}</div><div style="position:relative;height:100px;"><canvas id="sm${i}"></canvas></div>`;
+    grid.appendChild(wrap);
+    new Chart(document.getElementById('sm'+i), {
+      type:'line', data:{ labels:months, datasets:[{ data:raw[k], borderColor:colors[i], backgroundColor:colors[i]+'18', tension:0.35, pointRadius:2, borderWidth:2, fill:true }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:true}},
+        scales:{ x:{ticks:{font:{size:10},maxRotation:0}, grid:{display:false}}, y:{ticks:{font:{size:10},maxTicksLimit:4}, grid:{color:'rgba(0,0,0,0.06)'}} }
+      }
+    });
+  });
+}
+
+function buildSpark() {
+  window._sparkBuilt = true;
+  const grid = document.getElementById('sparkGrid');
+  keys.forEach((k,i) => {
+    const vals = raw[k];
+    const last = vals[vals.length-1];
+    const prev = vals[vals.length-2];
+    const pct = ((last-prev)/prev*100).toFixed(1);
+    const up = last >= prev;
+    const card = document.createElement('div');
+    card.className = 'sm-card';
+    card.innerHTML = `<div class="sm-label">${labels[i]}</div><div class="sm-value" style="color:${colors[i]}">${last}</div><div style="position:relative;height:50px;margin-bottom:6px;"><canvas id="sp${i}"></canvas></div><div class="sm-change" style="color:${up?'#1D9E75':'#E24B4A'}">${up?'▲':'▼'} ${Math.abs(pct)}% vs mes anterior</div>`;
+    grid.appendChild(card);
+    new Chart(document.getElementById('sp'+i), {
+      type:'line', data:{ labels:months, datasets:[{ data:vals, borderColor:colors[i], tension:0.4, pointRadius:0, borderWidth:1.5 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:false}},
+        scales:{ x:{display:false}, y:{display:false} }
+      }
+    });
+  });
+}
+</script>
+</body>
+</html>
